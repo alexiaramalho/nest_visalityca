@@ -1,8 +1,24 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UnauthorizedException,
+  Get,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginMedicoDTO } from './DTO/login.dto';
 import { UserSignUpDTO } from 'src/medico/DTO/medico.dto';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import type { RequestWithMedico } from './types/request-with-medico.interface';
+import { Medico } from 'src/medico/medico.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -27,5 +43,12 @@ export class AuthController {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
     return this.authService.login(medico);
+  }
+
+  @Get('perfil')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  getProfile(@Request() req: RequestWithMedico): Medico {
+    return req.user;
   }
 }
