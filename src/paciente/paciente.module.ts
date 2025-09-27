@@ -3,7 +3,6 @@ import { PacienteService } from './paciente.service';
 import { PacienteController } from './paciente.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Paciente } from './paciente.entity';
-import { AdminModule } from 'src/admin/admin.module';
 import { SharedModule } from 'src/shared/shared.module';
 
 @Module({

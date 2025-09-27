@@ -11,8 +11,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   const config = new DocumentBuilder()
-    .setTitle('API Visalityca')
-    .setDescription('Documentação da API do projeto Visalityca')
+    .setTitle('API Visalytica')
+    .setDescription('Documentação da API do projeto Visalytica')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

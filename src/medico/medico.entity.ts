@@ -17,7 +17,7 @@ export class Medico {
   @Column({ unique: true })
   username: string;
 
-  @Column()
+  @Column({ select: false })
   senha: string;
 
   @Column({ type: 'varchar', length: 150, nullable: false })

@@ -39,6 +39,12 @@ export class Amostra {
   })
   numeroExame: number;
 
+  @Column({ type: 'date', nullable: true })
+  inicio_analise: Date;
+
+  @Column({ type: 'date', nullable: true })
+  fim_analise: Date;
+
   @CreateDateColumn()
   dataRegistro: Date;
 
