@@ -1,4 +1,12 @@
-import { Controller, Get, Param, UseGuards, Request, Delete, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+  Request,
+  Delete,
+  Body,
+} from '@nestjs/common';
 import { PacienteService } from './paciente.service';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -31,7 +39,10 @@ export class PacienteController {
   obterResumoLista() {
     return this.pacienteService.getSummaryList();
   }
+
   @Delete(':id')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Solicita a exclusão de um paciente' })
   @ApiParam({ name: 'id', description: 'ID do paciente (UUID)' })
   @ApiBody({ type: RequestDeletionDTO })
