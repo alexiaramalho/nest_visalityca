@@ -1,10 +1,17 @@
 import { Amostra } from '../amostra/amostra.entity';
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('tb_pacientes')
 export class Paciente {
-  @PrimaryGeneratedColumn({ name: 'id_paciente' })
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'varchar', length: 150, nullable: false })
   nome: string;
@@ -15,6 +22,15 @@ export class Paciente {
   @Column({ type: 'date', name: 'data_nascimento', nullable: false })
   dataNascimento: Date;
 
-  @OneToMany(() => Amostra, (amostra) => amostra.paciente)
+  @CreateDateColumn()
+  dataCriacao: Date;
+
+  @UpdateDateColumn()
+  dataAtualizacao: Date;
+
+  @OneToMany(() => Amostra, (amostra) => amostra.paciente, {
+    cascade: true,
+    // onDelete: 'CASCADE',
+  })
   amostras: Amostra[];
 }

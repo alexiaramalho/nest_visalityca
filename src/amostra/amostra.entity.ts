@@ -6,6 +6,8 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('tb_amostras')
@@ -31,10 +33,24 @@ export class Amostra {
   @Column()
   observacao: string;
 
-  @Column()
-  imagens: string;
+  @Column({
+    type: 'int',
+    default: 0,
+  })
+  numeroExame: number;
 
-  @ManyToOne(() => Paciente, (paciente) => paciente.amostras)
+  @CreateDateColumn()
+  dataRegistro: Date;
+
+  @UpdateDateColumn()
+  dataAtualizacao: Date;
+
+  @Column({ type: 'jsonb', default: [] })
+  imageUrls: string[];
+
+  @ManyToOne(() => Paciente, (paciente) => paciente.amostras, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_paciente' })
   paciente: Paciente;
 

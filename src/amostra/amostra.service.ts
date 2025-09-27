@@ -1,39 +1,173 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Amostra } from './amostra.entity';
 import { Repository } from 'typeorm';
 import { RegistroAmostraDTO } from './DTO/amostra.dto';
-import { v4 as uuid, validate } from 'uuid';
+import { validate } from 'uuid';
+import { Paciente } from '../paciente/paciente.entity';
+import { Medico } from '../medico/medico.entity';
+import { S3Service } from 'src/files/s3.service';
+import { UpdateAmostraDTO } from './DTO/update-amostra.dto';
+import { DeletionRequest } from 'src/admin/deletion-request.entity';
+import { ItemType } from 'src/admin/enums/item-type.enum';
+import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 
 @Injectable()
 export class AmostraService {
   constructor(
     @InjectRepository(Amostra)
     private amostraRepository: Repository<Amostra>,
+
+    @InjectRepository(Paciente)
+    private pacienteRepository: Repository<Paciente>,
+
+    @InjectRepository(DeletionRequest)
+    private deletionRequestRepository: Repository<DeletionRequest>,
+
+    private readonly s3Service: S3Service,
   ) {}
 
   async registrarAmostra(
     registroAmostraDTO: RegistroAmostraDTO,
+    medicoLogado: Medico,
   ): Promise<Amostra> {
-    const novaAmostra = this.amostraRepository.create({
-      ...registroAmostraDTO,
+    const {
+      paciente: dadosPaciente,
+      imagensBase64,
+      ...dadosAmostra
+    } = registroAmostraDTO;
+
+    let pacienteFinal = await this.pacienteRepository.findOneBy({
+      cpf: dadosPaciente.cpf.replace(/\D/g, ''),
     });
+    if (!pacienteFinal) {
+      const dadosNovoPaciente = { ...dadosPaciente };
+      dadosNovoPaciente.cpf = dadosNovoPaciente.cpf.replace(/\D/g, '');
+      const novoPaciente = this.pacienteRepository.create(dadosNovoPaciente);
+      pacienteFinal = await this.pacienteRepository.save(novoPaciente);
+    }
+
+    const contagemExamesAnteriores = await this.amostraRepository.count({
+      where: {
+        paciente: { id: pacienteFinal.id },
+      },
+    });
+
+    const novaAmostra = this.amostraRepository.create({
+      ...dadosAmostra,
+      paciente: pacienteFinal,
+      medico: medicoLogado,
+      numeroExame: contagemExamesAnteriores + 1,
+    });
+
+    if (imagensBase64 && imagensBase64.length > 0) {
+      const uploadPromises = imagensBase64.map((base64String) => {
+        const matches = base64String.match(/^data:(.+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          throw new BadRequestException(
+            'Formato de imagem Base64 inválido na lista.',
+          );
+        }
+
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        return this.s3Service.uploadFile(buffer, mimeType);
+      });
+
+      const urls = await Promise.all(uploadPromises);
+      novaAmostra.imageUrls = urls;
+    }
 
     return this.amostraRepository.save(novaAmostra);
   }
 
+  async requestDeletion(
+    id: string,
+    dto: RequestDeletionDTO,
+    requester: Medico,
+  ): Promise<DeletionRequest> {
+    const amostra = await this.amostraRepository.findOneBy({ id });
+    if (!amostra) {
+      throw new NotFoundException(`Amostra com ID ${id} não encontrada.`);
+    }
+
+    const request = this.deletionRequestRepository.create({
+      itemId: id,
+      itemType: ItemType.AMOSTRA,
+      requester,
+      justificativa: dto.justificativa,
+    });
+
+    return this.deletionRequestRepository.save(request);
+  }
+
+  async atualizarAmostra(
+    id: string,
+    updateAmostraDTO: UpdateAmostraDTO,
+    medicoLogado: Medico,
+  ): Promise<Amostra> {
+    const amostra = await this.amostraRepository.findOne({
+      where: { id },
+      relations: ['medico'],
+    });
+
+    if (!amostra) {
+      throw new NotFoundException(`Amostra com ID ${id} não encontrada.`);
+    }
+
+    if (amostra.medico.id !== medicoLogado.id) {
+      throw new ForbiddenException(
+        'Você não tem permissão para editar esta amostra.',
+      );
+    }
+
+    Object.assign(amostra, updateAmostraDTO);
+
+    return this.amostraRepository.save(amostra);
+  }
+
   async pegarAmostraPorId(id: string) {
     if (!validate(id)) {
-      throw new NotFoundException('exame não encontrado');
+      throw new NotFoundException('ID de amostra inválido.');
     }
-    const found = await this.amostraRepository.findOne({ where: { id } });
+    const found = await this.amostraRepository.findOne({
+      where: { id },
+      relations: ['paciente', 'medico'],
+    });
     if (!found) {
-      throw new NotFoundException('exame não encontrado');
+      throw new NotFoundException('Amostra não encontrada.');
     }
     return found;
   }
 
   async buscarTodas(): Promise<Amostra[]> {
-    return this.amostraRepository.find();
+    return this.amostraRepository.find({
+      relations: ['paciente', 'medico'],
+    });
+  }
+
+  async deleteById(id: string): Promise<void> {
+    const amostra = await this.amostraRepository.findOneBy({ id });
+    if (!amostra) {
+      console.warn(
+        `Tentativa de deletar amostra com ID ${id} que não foi encontrada.`,
+      );
+      return;
+    }
+
+    if (amostra.imageUrls && amostra.imageUrls.length > 0) {
+      const deletePromises = amostra.imageUrls.map((url) =>
+        this.s3Service.deleteFile(url),
+      );
+      await Promise.all(deletePromises);
+    }
+    await this.amostraRepository.delete(id);
   }
 }
