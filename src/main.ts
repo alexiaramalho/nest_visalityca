@@ -10,6 +10,12 @@ async function bootstrap() {
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
   app.useGlobalPipes(new ValidationPipe());
 
+  app.enableCors({
+    origin: '*',
+    methods: '*',
+    allowedHeaders: '*',
+  });
+
   const config = new DocumentBuilder()
     .setTitle('API Visalytica')
     .setDescription('Documentação da API do projeto Visalytica')
