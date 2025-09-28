@@ -126,13 +126,15 @@ export class PacienteService {
     dto: RequestDeletionDTO,
     requester: Medico,
   ): Promise<DeletionRequest> {
-    const paciente = await this.pacienteRepository.findOneBy({ cpf });
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    const paciente = await this.pacienteRepository.findOneBy({ cpf: cpfLimpo });
+
     if (!paciente) {
       throw new NotFoundException(`Paciente com CPF ${cpf} não encontrado.`);
     }
 
-    const request: DeletionRequest = this.deletionRequestRepository.create({
-      itemId: cpf,
+    const request = this.deletionRequestRepository.create({
+      itemId: paciente.id,
       itemType: ItemType.PACIENTE,
       requester,
       justificativa: dto.justificativa,

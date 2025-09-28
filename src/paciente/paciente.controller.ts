@@ -25,6 +25,7 @@ import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 @Controller('pacientes')
 export class PacienteController {
   constructor(private readonly pacienteService: PacienteService) {}
+
   @Get('tabela')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
@@ -40,24 +41,19 @@ export class PacienteController {
     return this.pacienteService.getSummaryList();
   }
 
-  @Delete(':cpf')
+  @Get()
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Solicita a exclusão de um paciente' })
-  @ApiParam({ name: 'cpf', description: 'cpf do paciente' })
-  @ApiBody({ type: RequestDeletionDTO })
-  @ApiResponse({
-    status: 201,
-    description: 'Solicitação de exclusão criada com sucesso.',
+  @ApiOperation({
+    summary: 'Lista todos os pacientes com seus respectivos exames',
   })
-  @ApiResponse({ status: 404, description: 'Paciente não encontrado.' })
-  requestDeletion(
-    @Param('cpf') cpf: string,
-    @Body() dto: RequestDeletionDTO,
-    @Request() req: RequestWithMedico,
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de pacientes e exames retornada com sucesso.',
+  })
+  listarTodosPacientes(@Request() req: RequestWithMedico) {
     const medicoLogado = req.user;
-    return this.pacienteService.requestDeletion(cpf, dto, medicoLogado);
+    return this.pacienteService.findAllWithExams(medicoLogado);
   }
 
   @Get(':cpf')
@@ -84,18 +80,23 @@ export class PacienteController {
     return this.pacienteService.findDetailsByCpf(cpf, medicoLogado);
   }
 
-  @Get()
+  @Delete(':cpf')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Lista todos os pacientes com seus respectivos exames',
-  })
+  @ApiOperation({ summary: 'Solicita a exclusão de um paciente' })
+  @ApiParam({ name: 'cpf', description: 'cpf do paciente' })
+  @ApiBody({ type: RequestDeletionDTO })
   @ApiResponse({
-    status: 200,
-    description: 'Lista de pacientes e exames retornada com sucesso.',
+    status: 201,
+    description: 'Solicitação de exclusão criada com sucesso.',
   })
-  listarTodosPacientes(@Request() req: RequestWithMedico) {
+  @ApiResponse({ status: 404, description: 'Paciente não encontrado.' })
+  requestDeletion(
+    @Param('cpf') cpf: string,
+    @Body() dto: RequestDeletionDTO,
+    @Request() req: RequestWithMedico,
+  ) {
     const medicoLogado = req.user;
-    return this.pacienteService.findAllWithExams(medicoLogado);
+    return this.pacienteService.requestDeletion(cpf, dto, medicoLogado);
   }
 }
