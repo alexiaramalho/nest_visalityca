@@ -40,11 +40,11 @@ export class PacienteController {
     return this.pacienteService.getSummaryList();
   }
 
-  @Delete(':id')
+  @Delete(':cpf')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Solicita a exclusão de um paciente' })
-  @ApiParam({ name: 'id', description: 'ID do paciente (UUID)' })
+  @ApiParam({ name: 'cpf', description: 'cpf do paciente' })
   @ApiBody({ type: RequestDeletionDTO })
   @ApiResponse({
     status: 201,
@@ -52,12 +52,12 @@ export class PacienteController {
   })
   @ApiResponse({ status: 404, description: 'Paciente não encontrado.' })
   requestDeletion(
-    @Param('id') id: string,
+    @Param('cpf') cpf: string,
     @Body() dto: RequestDeletionDTO,
     @Request() req: RequestWithMedico,
   ) {
     const medicoLogado = req.user;
-    return this.pacienteService.requestDeletion(id, dto, medicoLogado);
+    return this.pacienteService.requestDeletion(cpf, dto, medicoLogado);
   }
 
   @Get(':cpf')
