@@ -6,6 +6,7 @@ import {
   Request,
   Delete,
   Body,
+  Query,
 } from '@nestjs/common';
 import { PacienteService } from './paciente.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -14,12 +15,14 @@ import {
   ApiBody,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import type { RequestWithMedico } from 'src/auth/types/request-with-medico.interface';
 import { PacienteSummaryDTO } from './DTO/paciente-sumario.dto';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
+import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 
 @ApiTags('Pacientes')
 @Controller('pacientes')
@@ -37,8 +40,10 @@ export class PacienteController {
     description: 'Resumo da lista de pacientes retornado com sucesso.',
     type: [PacienteSummaryDTO],
   })
-  obterResumoLista() {
-    return this.pacienteService.getSummaryList();
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  obterResumoLista(@Query() paginationQuery: PaginationQueryDto) {
+    return this.pacienteService.getSummaryList(paginationQuery);
   }
 
   @Get()
@@ -51,9 +56,14 @@ export class PacienteController {
     status: 200,
     description: 'Lista de pacientes e exames retornada com sucesso.',
   })
-  listarTodosPacientes(@Request() req: RequestWithMedico) {
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  listarTodosPacientes(
+    @Query() paginationQuery: PaginationQueryDto,
+    @Request() req: RequestWithMedico,
+  ) {
     const medicoLogado = req.user;
-    return this.pacienteService.findAllWithExams(medicoLogado);
+    return this.pacienteService.findAllWithExams(paginationQuery, medicoLogado);
   }
 
   @Get(':cpf')
@@ -72,12 +82,19 @@ export class PacienteController {
     description: 'Paciente e exames encontrados com sucesso.',
   })
   @ApiResponse({ status: 404, description: 'Paciente não encontrado.' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   obterDetalhesPorCpf(
     @Param('cpf') cpf: string,
+    @Query() paginationQuery: PaginationQueryDto,
     @Request() req: RequestWithMedico,
   ) {
     const medicoLogado = req.user;
-    return this.pacienteService.findDetailsByCpf(cpf, medicoLogado);
+    return this.pacienteService.findDetailsByCpf(
+      cpf,
+      paginationQuery,
+      medicoLogado,
+    );
   }
 
   @Delete(':cpf')

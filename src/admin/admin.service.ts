@@ -8,9 +8,10 @@ import { DeletionRequest } from './deletion-request.entity';
 import { Repository } from 'typeorm';
 import { RequestStatus } from './enums/request-status.enum';
 import { Medico } from 'src/medico/medico.entity';
-import { PacienteService } from 'src/paciente/paciente.service'; // Assumindo que você tem PacienteService
-import { AmostraService } from 'src/amostra/amostra.service'; // Assumindo que você tem AmostraService
+import { PacienteService } from 'src/paciente/paciente.service';
+import { AmostraService } from 'src/amostra/amostra.service';
 import { ItemType } from './enums/item-type.enum';
+import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 
 @Injectable()
 export class AdminService {
@@ -21,11 +22,30 @@ export class AdminService {
     private amostraService: AmostraService,
   ) {}
 
-  async getPendingRequests(): Promise<DeletionRequest[]> {
-    return this.deletionRequestRepository.find({
-      where: { status: RequestStatus.PENDENTE },
-      relations: ['requester'],
-    });
+  async getPendingRequests(paginationQuery: PaginationQueryDto) {
+    const { page = 1, limit = 10 } = paginationQuery;
+    const skip = (page - 1) * limit;
+
+    const [requests, totalItems] =
+      await this.deletionRequestRepository.findAndCount({
+        where: { status: RequestStatus.PENDENTE },
+        relations: ['requester'],
+        order: {
+          createdAt: 'ASC',
+        },
+        skip: skip,
+        take: limit,
+      });
+
+    const meta = {
+      totalItems,
+      itemCount: requests.length,
+      itemsPerPage: limit,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+    };
+
+    return { items: requests, meta };
   }
 
   async reviewRequest(

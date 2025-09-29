@@ -10,6 +10,7 @@ import {
   Request,
   Patch,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { AmostraService } from './amostra.service';
 import { RegistroAmostraDTO } from './DTO/amostra.dto';
@@ -17,6 +18,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
 import { Amostra } from './amostra.entity';
@@ -24,6 +26,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { RequestWithMedico } from 'src/auth/types/request-with-medico.interface';
 import { UpdateAmostraDTO } from './DTO/update-amostra.dto';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
+import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 
 @Controller('amostras')
 export class AmostraController {
@@ -112,7 +115,9 @@ export class AmostraController {
     description: 'Lista de amostras retornada com sucesso.',
     type: [Amostra],
   })
-  async buscarTodas(): Promise<Amostra[]> {
-    return this.amostraService.buscarTodas();
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async buscarTodas(@Query() paginationQuery: PaginationQueryDto) {
+    return this.amostraService.buscarTodas(paginationQuery);
   }
 }

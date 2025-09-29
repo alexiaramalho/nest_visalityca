@@ -6,6 +6,8 @@ import { Medico } from 'src/medico/medico.entity';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 import { DeletionRequest } from 'src/admin/deletion-request.entity';
 import { ItemType } from 'src/admin/enums/item-type.enum';
+import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
+import { Amostra } from 'src/amostra/amostra.entity';
 
 @Injectable()
 export class PacienteService {
@@ -15,12 +17,23 @@ export class PacienteService {
 
     @InjectRepository(DeletionRequest)
     private deletionRequestRepository: Repository<DeletionRequest>,
+
+    @InjectRepository(Amostra)
+    private amostraRepository: Repository<Amostra>,
   ) {}
 
-  async getSummaryList() {
-    const query = this.pacienteRepository
+  async getSummaryList(paginationQuery: PaginationQueryDto) {
+    const { page = 1, limit = 8 } = paginationQuery;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.pacienteRepository
       .createQueryBuilder('paciente')
       .leftJoin('paciente.amostras', 'amostra')
+      .groupBy('paciente.id');
+
+    const totalItems = await queryBuilder.getCount();
+
+    const items = await queryBuilder
       .select([
         'paciente.nome AS nome_paciente',
         'paciente.cpf AS cpf',
@@ -28,27 +41,50 @@ export class PacienteService {
         'MAX(amostra.dataAtualizacao) AS ultima_atualizacao_exame',
         'COUNT(amostra.id) AS quantidade_exames',
       ])
-      .groupBy('paciente.id')
+      .orderBy('MAX(amostra.dataAtualizacao)', 'DESC')
+      .offset(skip)
+      .limit(limit)
       .getRawMany();
 
-    return query;
+    const meta = {
+      totalItems,
+      itemCount: items.length,
+      itemsPerPage: limit,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+    };
+
+    return { items, meta };
   }
 
-  async findDetailsByCpf(cpf: string, medicoLogado: Medico) {
+  async findDetailsByCpf(
+    cpf: string,
+    paginationQuery: PaginationQueryDto,
+    medicoLogado: Medico,
+  ) {
+    const { page = 1, limit = 3 } = paginationQuery;
+    const skip = (page - 1) * limit;
     const cpfLimpo = cpf.replace(/\D/g, '');
 
     const paciente = await this.pacienteRepository.findOne({
       where: { cpf: cpfLimpo },
-      relations: {
-        amostras: {
-          medico: true,
-        },
-      },
     });
 
     if (!paciente) {
       throw new NotFoundException(`Paciente com CPF ${cpf} não encontrado.`);
     }
+
+    const [amostras, totalItems] = await this.amostraRepository.findAndCount({
+      where: { paciente: { id: paciente.id } },
+      relations: {
+        medico: true,
+      },
+      order: {
+        dataAtualizacao: 'DESC',
+      },
+      skip: skip,
+      take: limit,
+    });
 
     const resposta = {
       paciente: {
@@ -58,15 +94,17 @@ export class PacienteService {
         dataNascimento: paciente.dataNascimento,
       },
       exames: {
-        qtd_total: paciente.amostras.length,
-        lista: paciente.amostras.map((amostra) => ({
+        meta: {
+          totalItems,
+          itemCount: amostras.length,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(totalItems / limit),
+          currentPage: page,
+        },
+        lista: amostras.map((amostra) => ({
           id: amostra.id,
           nome_amostra: amostra.nome_amostra,
           numeroExame: amostra.numeroExame,
-          possivel_diagnostico: amostra.possivel_diagnostico,
-          data_criacao: amostra.dataRegistro,
-          data_atualizacao: amostra.dataAtualizacao,
-          imageUrls: amostra.imageUrls,
           medico: {
             id: amostra.medico.id,
             nome: amostra.medico.nome,
@@ -79,16 +117,26 @@ export class PacienteService {
     return resposta;
   }
 
-  async findAllWithExams(medicoLogado: Medico) {
-    const pacientes = await this.pacienteRepository.find({
+  async findAllWithExams(
+    paginationQuery: PaginationQueryDto,
+    medicoLogado: Medico,
+  ) {
+    const { page = 1, limit = 10 } = paginationQuery;
+    const skip = (page - 1) * limit;
+    const [pacientes, totalItems] = await this.pacienteRepository.findAndCount({
       relations: {
         amostras: {
           medico: true,
         },
       },
+      order: {
+        nome: 'ASC',
+      },
+      skip: skip,
+      take: limit,
     });
 
-    const resposta = pacientes.map((paciente) => ({
+    const items = pacientes.map((paciente) => ({
       paciente: {
         id: paciente.id,
         cpf: paciente.cpf,
@@ -111,8 +159,17 @@ export class PacienteService {
       },
     }));
 
-    return resposta;
+    const meta = {
+      totalItems,
+      itemCount: items.length,
+      itemsPerPage: limit,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+    };
+
+    return { items, meta };
   }
+
   async deleteById(id: string): Promise<void> {
     const result = await this.pacienteRepository.delete(id);
 

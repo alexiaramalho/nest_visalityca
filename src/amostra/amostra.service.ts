@@ -16,6 +16,7 @@ import { UpdateAmostraDTO } from './DTO/update-amostra.dto';
 import { DeletionRequest } from 'src/admin/deletion-request.entity';
 import { ItemType } from 'src/admin/enums/item-type.enum';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
+import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 
 @Injectable()
 export class AmostraService {
@@ -147,10 +148,28 @@ export class AmostraService {
     return found;
   }
 
-  async buscarTodas(): Promise<Amostra[]> {
-    return this.amostraRepository.find({
+  async buscarTodas(paginationQuery: PaginationQueryDto) {
+    const { page = 1, limit = 10 } = paginationQuery;
+    const skip = (page - 1) * limit;
+
+    const [amostras, totalItems] = await this.amostraRepository.findAndCount({
       relations: ['paciente', 'medico'],
+      order: {
+        dataAtualizacao: 'DESC',
+      },
+      skip: skip,
+      take: limit,
     });
+
+    const meta = {
+      totalItems,
+      itemCount: amostras.length,
+      itemsPerPage: limit,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+    };
+
+    return { items: amostras, meta };
   }
 
   async deleteById(id: string): Promise<void> {
