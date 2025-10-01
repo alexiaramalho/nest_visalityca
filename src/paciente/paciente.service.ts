@@ -94,6 +94,7 @@ export class PacienteService {
     cpf: string,
     paginationQuery: PaginationQueryDto,
     medicoLogado: Medico,
+    search?: string,
   ) {
     const { page = 1, limit = 3 } = paginationQuery;
     const skip = (page - 1) * limit;
@@ -107,17 +108,34 @@ export class PacienteService {
       throw new NotFoundException(`Paciente com CPF ${cpf} não encontrado.`);
     }
 
-    const [amostras, totalItems] = await this.amostraRepository.findAndCount({
-      where: { paciente: { id: paciente.id } },
-      relations: {
-        medico: true,
-      },
-      order: {
-        dataAtualizacao: 'DESC',
-      },
-      skip: skip,
-      take: limit,
-    });
+    const queryBuilder = this.amostraRepository
+      .createQueryBuilder('amostra')
+      .leftJoinAndSelect('amostra.medico', 'medico')
+      .where('amostra.id_paciente = :pacienteId', { pacienteId: paciente.id });
+
+    if (search && search.trim() !== '') {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('LOWER(amostra.nome_amostra) LIKE :searchTerm', {
+            searchTerm,
+          })
+            .orWhere('LOWER(medico.nome) LIKE :searchTerm', { searchTerm })
+            .orWhere('CAST(amostra.numeroExame AS TEXT) LIKE :searchTerm', {
+              searchTerm,
+            });
+        }),
+      );
+    }
+
+    const totalItems = await queryBuilder.getCount();
+
+    const amostras = await queryBuilder
+      .orderBy('amostra.dataAtualizacao', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getMany();
 
     const resposta = {
       paciente: {

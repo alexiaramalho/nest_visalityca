@@ -23,6 +23,8 @@ import type { RequestWithMedico } from 'src/auth/types/request-with-medico.inter
 import { PacienteSummaryDTO } from './DTO/paciente-sumario.dto';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
+import { Medico } from 'src/medico/medico.entity';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @ApiTags('Pacientes')
 @Controller('pacientes')
@@ -93,16 +95,24 @@ export class PacienteController {
   @ApiResponse({ status: 404, description: 'Paciente não encontrado.' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description:
+      'Filtra os exames por nome da amostra, médico ou número do exame.',
+  })
   obterDetalhesPorCpf(
     @Param('cpf') cpf: string,
     @Query() paginationQuery: PaginationQueryDto,
-    @Request() req: RequestWithMedico,
+    @Query('search') search: string,
+    @GetUser() medicoLogado: Medico,
   ) {
-    const medicoLogado = req.user;
     return this.pacienteService.findDetailsByCpf(
       cpf,
       paginationQuery,
       medicoLogado,
+      search,
     );
   }
 
