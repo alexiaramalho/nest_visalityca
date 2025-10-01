@@ -17,22 +17,25 @@ import { Role } from 'src/auth/enums/role.enum';
 export class MedicoController {
   constructor(private readonly medicoService: MedicoService) {}
 
-  @Get(':id/stats/monthly-count')
+  @Get('stats/monthly-count')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Retorna a contagem mensal de exames de um médico' })
-  async getMonthlyStats(
-    @Param('id') id: string,
-    @Request() req: RequestWithMedico,
-  ) {
+  @ApiOperation({
+    summary: 'Retorna a contagem mensal de exames do médico logado',
+  })
+  async getMyMonthlyStats(@Request() req: RequestWithMedico) {
     const medicoLogado = req.user;
 
-    if (medicoLogado.role !== Role.ADMIN && medicoLogado.id !== id) {
-      throw new ForbiddenException(
-        'Você não tem permissão para acessar estas informações.',
-      );
-    }
+    return this.medicoService.getMonthlyExamCount(medicoLogado.id);
+  }
 
-    return this.medicoService.getMonthlyExamCount(id);
+  @Get('stats/global-monthly-count')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Retorna a contagem mensal de exames de TODOS os médicos',
+  })
+  async getGlobalMonthlyStats() {
+    return this.medicoService.getGlobalMonthlyExamCount();
   }
 }

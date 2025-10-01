@@ -40,6 +40,33 @@ export class MedicoService {
     return formattedData;
   }
 
+  async getGlobalMonthlyExamCount(): Promise<
+    { year: number; month: number; visalytica: number; manual: number }[]
+  > {
+    const rawData: MonthlyExamCount[] = await this.amostraRepository
+      .createQueryBuilder('amostra')
+      .select("DATE_TRUNC('month', amostra.dataRegistro)", 'month')
+      .addSelect('COUNT(amostra.id)', 'count')
+      .groupBy('month')
+      .orderBy('month', 'DESC')
+      .getRawMany();
+
+    const formattedData = rawData.map((row) => {
+      const visalyticaCount = parseInt(row.count, 10);
+
+      const manualCount = Math.floor(visalyticaCount / 2.5);
+
+      return {
+        year: new Date(row.month).getFullYear(),
+        month: new Date(row.month).getMonth() + 1,
+        visalytica: visalyticaCount,
+        manual: manualCount,
+      };
+    });
+
+    return formattedData;
+  }
+
   async create(userSignUpDTO: UserSignUpDTO): Promise<Medico> {
     const { username, role } = userSignUpDTO;
 
