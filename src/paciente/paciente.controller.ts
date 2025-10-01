@@ -42,10 +42,19 @@ export class PacienteController {
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  obterResumoLista(@Query() paginationQuery: PaginationQueryDto) {
-    return this.pacienteService.getSummaryList(paginationQuery);
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description:
+      'Termo para buscar por nome do paciente, CPF ou nome do médico.',
+  })
+  obterResumoLista(
+    @Query() paginationQuery: PaginationQueryDto,
+    @Query('search') search?: string,
+  ) {
+    return this.pacienteService.getSummaryList(paginationQuery, search);
   }
-
   @Get()
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()

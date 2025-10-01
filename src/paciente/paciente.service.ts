@@ -8,6 +8,7 @@ import { DeletionRequest } from 'src/admin/deletion-request.entity';
 import { ItemType } from 'src/admin/enums/item-type.enum';
 import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 import { Amostra } from 'src/amostra/amostra.entity';
+import { Brackets } from 'typeorm';
 
 @Injectable()
 export class PacienteService {
@@ -22,26 +23,58 @@ export class PacienteService {
     private amostraRepository: Repository<Amostra>,
   ) {}
 
-  async getSummaryList(paginationQuery: PaginationQueryDto) {
+  async getSummaryList(paginationQuery: PaginationQueryDto, search?: string) {
     const { page = 1, limit = 8 } = paginationQuery;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.pacienteRepository
       .createQueryBuilder('paciente')
       .leftJoin('paciente.amostras', 'amostra')
-      .groupBy('paciente.id');
+      .leftJoin('amostra.medico', 'medico');
 
-    const totalItems = await queryBuilder.getCount();
+    if (search && search.trim() !== '') {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+      const numericTerm = search.trim().replace(/\D/g, '');
+
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('LOWER(paciente.nome) LIKE :searchTerm', { searchTerm });
+
+          if (numericTerm.length > 0) {
+            qb.orWhere('paciente.cpf LIKE :cpfSearch', {
+              cpfSearch: `%${numericTerm}%`,
+            });
+          }
+
+          const subQuery = this.amostraRepository
+            .createQueryBuilder('sub_amostra')
+            .select('sub_amostra.id_paciente')
+            .innerJoin('sub_amostra.medico', 'sub_medico')
+            .where('LOWER(sub_medico.nome) LIKE :searchTerm', { searchTerm });
+
+          qb.orWhere(`paciente.id IN (${subQuery.getQuery()})`);
+          queryBuilder.setParameters(subQuery.getParameters());
+        }),
+      );
+    }
+
+    queryBuilder.groupBy(
+      'paciente.id, paciente.nome, paciente.cpf, paciente.dataCriacao',
+    );
+
+    const countQueryBuilder = queryBuilder.clone();
+    const totalItems = await countQueryBuilder.getCount();
 
     const items = await queryBuilder
       .select([
         'paciente.nome AS nome_paciente',
         'paciente.cpf AS cpf',
+        'paciente.id AS id_paciente',
         'paciente.dataCriacao AS data_criacao_paciente',
         'MAX(amostra.dataAtualizacao) AS ultima_atualizacao_exame',
         'COUNT(amostra.id) AS quantidade_exames',
       ])
-      .orderBy('MAX(amostra.dataAtualizacao)', 'DESC')
+      .orderBy('ultima_atualizacao_exame', 'DESC', 'NULLS LAST')
       .offset(skip)
       .limit(limit)
       .getRawMany();

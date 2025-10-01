@@ -15,7 +15,7 @@ export class MedicoService {
   constructor(
     @InjectRepository(Medico)
     private readonly medicoRepository: Repository<Medico>,
-    @InjectRepository(Amostra) // 1. Injete o repositório da Amostra
+    @InjectRepository(Amostra)
     private readonly amostraRepository: Repository<Amostra>,
   ) {}
 
