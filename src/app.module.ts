@@ -12,6 +12,7 @@ import { ConfigModule } from '@nestjs/config';
 import { FilesModule } from './files/files.module';
 import { DeletionRequest } from './admin/deletion-request.entity';
 import { AdminModule } from './admin/admin.module';
+import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AdminModule } from './admin/admin.module';
     MedicoModule,
     FilesModule,
     AdminModule,
+    SeedModule,
   ],
   controllers: [],
   providers: [],

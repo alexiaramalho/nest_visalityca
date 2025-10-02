@@ -48,10 +48,10 @@ export class Amostra {
   @Column({ type: 'float', nullable: true })
   tempo_total_analise: number;
 
-  @CreateDateColumn()
+  @Column({ type: 'timestamp' })
   dataRegistro: Date;
 
-  @UpdateDateColumn()
+  @Column({ type: 'timestamp' })
   dataAtualizacao: Date;
 
   @Column({ type: 'jsonb', default: [] })

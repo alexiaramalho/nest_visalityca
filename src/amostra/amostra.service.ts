@@ -94,6 +94,8 @@ export class AmostraService {
       paciente: pacienteFinal,
       medico: medicoLogado,
       numeroExame: contagemExamesAnteriores + 1,
+      dataRegistro: new Date(),
+      dataAtualizacao: new Date(),
     });
 
     if (imagensBase64 && imagensBase64.length > 0) {
@@ -185,6 +187,8 @@ export class AmostraService {
     }
 
     Object.assign(amostra, updateAmostraDTO);
+
+    amostra.dataAtualizacao = new Date();
 
     return this.amostraRepository.save(amostra);
   }
