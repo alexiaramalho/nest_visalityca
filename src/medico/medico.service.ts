@@ -22,22 +22,45 @@ export class MedicoService {
   async getMonthlyExamCount(
     medicoId: string,
   ): Promise<{ year: number; month: number; count: number }[]> {
-    const rawData: MonthlyExamCount[] = await this.amostraRepository
-      .createQueryBuilder('amostra')
-      .select("DATE_TRUNC('month', amostra.dataRegistro)", 'month')
-      .addSelect('COUNT(amostra.id)', 'count')
-      .where('amostra.medico.id = :medicoId', { medicoId })
-      .groupBy('month')
-      .orderBy('month', 'DESC')
-      .getRawMany();
+    // 1. Busca a contagem de exames para os meses do ano atual
+    const rawData: { month_date: string; count: string }[] =
+      await this.amostraRepository
+        .createQueryBuilder('amostra')
+        .select("DATE_TRUNC('month', amostra.dataRegistro)", 'month_date')
+        .addSelect('COUNT(amostra.id)', 'count')
+        .where('amostra.medico.id = :medicoId', { medicoId })
+        .andWhere(
+          'EXTRACT(YEAR FROM amostra.dataRegistro) = EXTRACT(YEAR FROM CURRENT_DATE)',
+        )
+        .groupBy('month_date')
+        .getRawMany();
 
-    const formattedData = rawData.map((row) => ({
-      year: new Date(row.month).getFullYear(),
-      month: new Date(row.month).getMonth() + 1,
-      count: parseInt(row.count, 10),
-    }));
+    // 2. Mapeia os resultados para uma busca rápida (chave: mês, valor: contagem)
+    const contagemMap = new Map<number, number>();
+    rawData.forEach((row) => {
+      // Extrai o mês da data retornada
+      const mes = new Date(row.month_date).getMonth() + 1;
+      contagemMap.set(mes, parseInt(row.count, 10));
+    });
 
-    return formattedData;
+    // 3. Gera a lista completa de meses do ano até a data atual
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const mesAtual = hoje.getMonth() + 1;
+
+    const resultadoCompleto: { year: number; month: number; count: number }[] =
+      [];
+
+    for (let mes = 1; mes <= mesAtual; mes++) {
+      resultadoCompleto.push({
+        year: anoAtual,
+        month: mes,
+        // Usa a contagem do mapa ou 0 se o mês não tiver dados
+        count: contagemMap.get(mes) || 0,
+      });
+    }
+
+    return resultadoCompleto;
   }
 
   async getGlobalMonthlyExamCount(): Promise<

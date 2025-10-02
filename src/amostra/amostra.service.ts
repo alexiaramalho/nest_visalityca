@@ -124,26 +124,46 @@ export class AmostraService {
   async calcularMediaTempoPorMes(
     medicoLogado: Medico,
   ): Promise<MediaTempoDTO[]> {
-    const queryBuilder = this.amostraRepository.createQueryBuilder('amostra');
-
-    const mediaTempo: MediaTempoRaw[] = await queryBuilder
+    // 1. Busca no banco apenas os meses do ano atual que possuem dados
+    const mediaTempoFromDB: MediaTempoRaw[] = await this.amostraRepository
+      .createQueryBuilder('amostra')
       .select('EXTRACT(YEAR FROM amostra.fim_analise)', 'ano')
       .addSelect('EXTRACT(MONTH FROM amostra.fim_analise)', 'mes')
       .addSelect('AVG(amostra.tempo_total_analise)', 'media_tempo_minutos')
       .where('amostra.tempo_total_analise IS NOT NULL')
       .andWhere('amostra.id_medico = :medicoId', { medicoId: medicoLogado.id })
+      .andWhere(
+        'EXTRACT(YEAR FROM amostra.fim_analise) = EXTRACT(YEAR FROM CURRENT_DATE)',
+      )
       .groupBy('ano, mes')
-      .orderBy('ano', 'DESC')
-      .addOrderBy('mes', 'DESC')
       .getRawMany();
 
-    return mediaTempo.map((item) => ({
-      ano: Number(item.ano),
-      mes: Number(item.mes),
-      mediaTempoMinutos: parseFloat(
-        Number(item.media_tempo_minutos).toFixed(2),
-      ),
-    }));
+    // 2. Mapeia os resultados para uma busca rápida (chave: mês, valor: média)
+    const mediaMap = new Map<number, number>();
+    mediaTempoFromDB.forEach((item) => {
+      mediaMap.set(
+        Number(item.mes),
+        parseFloat(Number(item.media_tempo_minutos).toFixed(2)),
+      );
+    });
+
+    // 3. Gera a lista completa de meses do ano até a data atual
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const mesAtual = hoje.getMonth() + 1; // getMonth() retorna 0-11, então +1
+
+    const resultadoCompleto: MediaTempoDTO[] = [];
+
+    for (let mes = 1; mes <= mesAtual; mes++) {
+      resultadoCompleto.push({
+        ano: anoAtual,
+        mes: mes,
+        // Usa a média do mapa ou 0 se o mês não tiver dados
+        mediaTempoMinutos: mediaMap.get(mes) || 0,
+      });
+    }
+
+    return resultadoCompleto;
   }
 
   async requestDeletion(
