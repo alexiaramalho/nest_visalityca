@@ -40,8 +40,23 @@ export class AmostraService {
     const {
       paciente: dadosPaciente,
       imagensBase64,
+      inicio_analise,
       ...dadosAmostra
     } = registroAmostraDTO;
+
+    const fim_analise = new Date();
+
+    let tempoTotal: number | undefined = undefined;
+    if (inicio_analise && fim_analise) {
+      const inicio = new Date(inicio_analise).getTime();
+      const fim = new Date(fim_analise).getTime();
+
+      const diferencaEmMs = Math.abs(fim - inicio);
+
+      const diferencaEmMinutos = diferencaEmMs / (1000 * 60);
+
+      tempoTotal = parseFloat(diferencaEmMinutos.toFixed(2));
+    }
 
     let pacienteFinal = await this.pacienteRepository.findOneBy({
       cpf: dadosPaciente.cpf.replace(/\D/g, ''),
@@ -61,6 +76,9 @@ export class AmostraService {
 
     const novaAmostra = this.amostraRepository.create({
       ...dadosAmostra,
+      inicio_analise,
+      fim_analise,
+      tempo_total_analise: tempoTotal,
       paciente: pacienteFinal,
       medico: medicoLogado,
       numeroExame: contagemExamesAnteriores + 1,

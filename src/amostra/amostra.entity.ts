@@ -39,11 +39,14 @@ export class Amostra {
   })
   numeroExame: number;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   inicio_analise: Date;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   fim_analise: Date;
+
+  @Column({ type: 'float', nullable: true })
+  tempo_total_analise: number;
 
   @CreateDateColumn()
   dataRegistro: Date;

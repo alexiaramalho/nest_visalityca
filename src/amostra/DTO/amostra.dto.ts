@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsArray,
+  IsDateString,
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   ValidateNested,
 } from 'class-validator';
 import { PacienteAmostraDTO } from '../../paciente/DTO/pacienteAmostra.dto';
@@ -42,7 +42,8 @@ export class RegistroAmostraDTO {
   observacao: string;
 
   @ApiProperty({
-    description: 'String da imagem em formato Base64 com prefixo de data URI (ex: data:image/jpeg;base64,...).',
+    description:
+      'String da imagem em formato Base64 com prefixo de data URI (ex: data:image/jpeg;base64,...).',
     example: '[data:image/jpeg;base64,/9j/4AAQSkZJRg...]',
   })
   @IsArray()
@@ -50,9 +51,17 @@ export class RegistroAmostraDTO {
   imagensBase64: string[];
 
   @ApiProperty({
+    description: 'Data e hora do início da análise.',
+    example: '2025-10-02T14:00:00.000Z',
+  })
+  @IsNotEmpty()
+  @IsDateString()
+  inicio_analise: Date;
+
+  @ApiProperty({
     description:
       'Dados do paciente. Se o CPF já existir, o paciente será reutilizado. Se não, um novo será criado.',
-    type: () => PacienteAmostraDTO, // Informa ao Swagger que aqui é um objeto do tipo PacienteAmostraDTO
+    type: () => PacienteAmostraDTO,
   })
   @ValidateNested()
   @Type(() => PacienteAmostraDTO)
