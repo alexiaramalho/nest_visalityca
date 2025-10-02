@@ -27,8 +27,12 @@ import type { RequestWithMedico } from 'src/auth/types/request-with-medico.inter
 import { UpdateAmostraDTO } from './DTO/update-amostra.dto';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
+import { Medico } from 'src/medico/medico.entity';
+import { MediaTempoDTO } from './amostra.service';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @Controller('amostras')
+@UseGuards(AuthGuard('jwt'))
 export class AmostraController {
   constructor(private readonly amostraService: AmostraService) {}
 
@@ -56,6 +60,15 @@ export class AmostraController {
       registroAmostraDTO,
       medicoLogado,
     );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @Get('/media-tempo-mensal')
+  async getMediaTempoMensal(
+    @GetUser() medicoLogado: Medico,
+  ): Promise<MediaTempoDTO[]> {
+    return this.amostraService.calcularMediaTempoPorMes(medicoLogado);
   }
 
   @UseGuards(AuthGuard('jwt'))

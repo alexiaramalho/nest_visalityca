@@ -18,6 +18,18 @@ import { ItemType } from 'src/admin/enums/item-type.enum';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 
+interface MediaTempoRaw {
+  ano: string;
+  mes: string;
+  media_tempo_minutos: string;
+}
+
+export interface MediaTempoDTO {
+  ano: number;
+  mes: number;
+  mediaTempoMinutos: number;
+}
+
 @Injectable()
 export class AmostraService {
   constructor(
@@ -105,6 +117,31 @@ export class AmostraService {
     }
 
     return this.amostraRepository.save(novaAmostra);
+  }
+
+  async calcularMediaTempoPorMes(
+    medicoLogado: Medico,
+  ): Promise<MediaTempoDTO[]> {
+    const queryBuilder = this.amostraRepository.createQueryBuilder('amostra');
+
+    const mediaTempo: MediaTempoRaw[] = await queryBuilder
+      .select('EXTRACT(YEAR FROM amostra.fim_analise)', 'ano')
+      .addSelect('EXTRACT(MONTH FROM amostra.fim_analise)', 'mes')
+      .addSelect('AVG(amostra.tempo_total_analise)', 'media_tempo_minutos')
+      .where('amostra.tempo_total_analise IS NOT NULL')
+      .andWhere('amostra.id_medico = :medicoId', { medicoId: medicoLogado.id })
+      .groupBy('ano, mes')
+      .orderBy('ano', 'DESC')
+      .addOrderBy('mes', 'DESC')
+      .getRawMany();
+
+    return mediaTempo.map((item) => ({
+      ano: Number(item.ano),
+      mes: Number(item.mes),
+      mediaTempoMinutos: parseFloat(
+        Number(item.media_tempo_minutos).toFixed(2),
+      ),
+    }));
   }
 
   async requestDeletion(
