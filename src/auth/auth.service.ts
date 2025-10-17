@@ -31,10 +31,15 @@ export class AuthService {
   }
 
   login(medico: Medico) {
-    const payload = { username: medico.username, sub: medico.id };
+    const payload = {
+      username: medico.username,
+      sub: medico.id,
+      role: medico.role,
+    };
     return {
       access_token: this.jwtService.sign(payload),
       nome: medico.nome,
+      role: medico.role,
     };
   }
 }
