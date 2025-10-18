@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Medico } from './medico.entity';
-import { Repository } from 'typeorm';
+import { createQueryBuilder, Repository } from 'typeorm';
 import { UserSignUpDTO } from './DTO/medico.dto';
 import { Amostra } from 'src/amostra/amostra.entity';
 
@@ -91,12 +91,32 @@ export class MedicoService {
   }
 
   async create(userSignUpDTO: UserSignUpDTO): Promise<Medico> {
-    const { username, role } = userSignUpDTO;
+    const { username, cpf, crm } = userSignUpDTO;
 
-    const existsUser = await this.findByUsername(username);
-    if (existsUser) {
-      throw new BadRequestException('Este nome de usuário já está em uso.');
+    const errors: string[] = [];
+
+    const [existingUsername, existingCpf, existingCrm] = await Promise.all([
+      this.medicoRepository.findOne({ where: { username } }),
+      this.medicoRepository.findOne({ where: { cpf } }),
+      crm
+        ? this.medicoRepository.findOne({ where: { crm } })
+        : Promise.resolve(null),
+    ]);
+
+    if (existingUsername) {
+      errors.push('Este nome de usuário já está em uso.');
     }
+    if (existingCpf) {
+      errors.push('Este CPF já está cadastrado.');
+    }
+    if (existingCrm) {
+      errors.push('Este CRM já está cadastrado.');
+    }
+
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
     const user = this.medicoRepository.create(userSignUpDTO);
 
     return this.medicoRepository.save(user);
