@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Paciente } from './paciente.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Medico } from 'src/medico/medico.entity';
 import { RequestDeletionDTO } from 'src/admin/DTO/request-deletion.dto';
 import { DeletionRequest } from 'src/admin/deletion-request.entity';
@@ -9,6 +9,7 @@ import { ItemType } from 'src/admin/enums/item-type.enum';
 import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 import { Amostra } from 'src/amostra/amostra.entity';
 import { Brackets } from 'typeorm';
+import { RequestStatus } from 'src/admin/enums/request-status.enum';
 
 @Injectable()
 export class PacienteService {
@@ -23,6 +24,16 @@ export class PacienteService {
     private amostraRepository: Repository<Amostra>,
   ) {}
 
+  async findById(id: string): Promise<Paciente | null> {
+    const paciente = await this.pacienteRepository.findOneBy({ id });
+    if (!paciente) {
+      console.warn(
+        `Paciente com ID ${id} não encontrado durante a busca de solicitações pendentes.`,
+      );
+      return null;
+    }
+    return paciente;
+  }
   async getSummaryList(paginationQuery: PaginationQueryDto, search?: string) {
     const { page = 1, limit = 8 } = paginationQuery;
     const skip = (page - 1) * limit;
@@ -137,6 +148,21 @@ export class PacienteService {
       .take(limit)
       .getMany();
 
+    const amostraIds = amostras.map((amostra) => amostra.id);
+    let deletionRequestsMap = new Map<string, RequestStatus>();
+
+    if (amostraIds.length > 0) {
+      const deletionRequests = await this.deletionRequestRepository.find({
+        where: {
+          itemId: In(amostraIds),
+          itemType: ItemType.AMOSTRA,
+        },
+      });
+
+      deletionRequestsMap = new Map(
+        deletionRequests.map((req) => [req.itemId, req.status]),
+      );
+    }
     const resposta = {
       paciente: {
         id: paciente.id,
@@ -164,6 +190,7 @@ export class PacienteService {
           comprimento: amostra.comprimento,
           largura: amostra.largura,
           altura: amostra.altura,
+          statusExclusao: deletionRequestsMap.get(amostra.id) || null,
           medico: {
             id: amostra.medico.id,
             nome: amostra.medico.nome,

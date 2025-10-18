@@ -18,7 +18,7 @@ export class DeletionRequest {
   @Column({ type: 'enum', enum: ItemType })
   itemType: ItemType;
 
-  @Column()
+  @Column({ type: 'uuid', nullable: true })
   itemId: string;
 
   @Column({ type: 'text', nullable: true })

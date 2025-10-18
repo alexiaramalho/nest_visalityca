@@ -1,9 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Medico } from './medico.entity';
-import { createQueryBuilder, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { UserSignUpDTO } from './DTO/medico.dto';
 import { Amostra } from 'src/amostra/amostra.entity';
+import { Role } from 'src/auth/enums/role.enum';
 
 interface MonthlyExamCount {
   month: string;
@@ -22,7 +27,6 @@ export class MedicoService {
   async getMonthlyExamCount(
     medicoId: string,
   ): Promise<{ year: number; month: number; count: number }[]> {
-    // 1. Busca a contagem de exames para os meses do ano atual
     const rawData: { month_date: string; count: string }[] =
       await this.amostraRepository
         .createQueryBuilder('amostra')
@@ -35,15 +39,12 @@ export class MedicoService {
         .groupBy('month_date')
         .getRawMany();
 
-    // 2. Mapeia os resultados para uma busca rápida (chave: mês, valor: contagem)
     const contagemMap = new Map<number, number>();
     rawData.forEach((row) => {
-      // Extrai o mês da data retornada
       const mes = new Date(row.month_date).getMonth() + 1;
       contagemMap.set(mes, parseInt(row.count, 10));
     });
 
-    // 3. Gera a lista completa de meses do ano até a data atual
     const hoje = new Date();
     const anoAtual = hoje.getFullYear();
     const mesAtual = hoje.getMonth() + 1;
@@ -55,7 +56,6 @@ export class MedicoService {
       resultadoCompleto.push({
         year: anoAtual,
         month: mes,
-        // Usa a contagem do mapa ou 0 se o mês não tiver dados
         count: contagemMap.get(mes) || 0,
       });
     }
@@ -132,5 +132,37 @@ export class MedicoService {
 
   async findById(id: string): Promise<Medico | null> {
     return this.medicoRepository.findOneBy({ id });
+  }
+
+  async findAllByRole(
+    role: Role,
+    paginationQuery: any,
+  ): Promise<{ items: Medico[]; meta: any }> {
+    const { page = 1, limit = 10 } = paginationQuery;
+    const skip = (page - 1) * limit;
+
+    const [medicos, totalItems] = await this.medicoRepository.findAndCount({
+      where: { role },
+      order: { nome: 'ASC' },
+      skip,
+      take: limit,
+    });
+
+    const meta = {
+      totalItems,
+      itemCount: medicos.length,
+      itemsPerPage: limit,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+    };
+
+    return { items: medicos, meta };
+  }
+
+  async deleteById(id: string): Promise<void> {
+    const result = await this.medicoRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
+    }
   }
 }
