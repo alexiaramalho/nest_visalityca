@@ -33,7 +33,7 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private medicoService: MedicoService,
-  ) {}
+  ) { }
 
   @Get('medicos')
   @Roles(Role.ADMIN)
@@ -41,6 +41,12 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Busca por nome, username, crm ou cpf',
+  })
   listMedicos(@Query() paginationQuery: PaginationQueryDto) {
     return this.adminService.listMedicos(paginationQuery);
   }
@@ -63,6 +69,12 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Busca por nome, username ou cpf',
+  })
   listAdmins(@Query() paginationQuery: PaginationQueryDto) {
     return this.adminService.listAdmins(paginationQuery);
   }
@@ -87,6 +99,12 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Busca por nome do paciente, cpf ou solicitante',
+  })
   getPendingPatientRequests(@Query() paginationQuery: PaginationQueryDto) {
     return this.adminService.getPendingPatientRequests(paginationQuery);
   }
@@ -99,6 +117,13 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description:
+      'Busca por nome do paciente, cpf, nome da amostra ou solicitante',
+  })
   getPendingExamRequests(@Query() paginationQuery: PaginationQueryDto) {
     return this.adminService.getPendingExamRequests(paginationQuery);
   }

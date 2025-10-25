@@ -23,14 +23,16 @@ export class AdminService {
     private pacienteService: PacienteService,
     private amostraService: AmostraService,
     private medicoService: MedicoService,
-  ) {}
+  ) { }
 
   async listMedicos(paginationQuery: any) {
-    return this.medicoService.findAllByRole(Role.MEDICO, paginationQuery);
+    const { search, ...pagination } = paginationQuery;
+    return this.medicoService.findAllByRole(Role.MEDICO, pagination, search);
   }
 
   async listAdmins(paginationQuery: any) {
-    return this.medicoService.findAllByRole(Role.ADMIN, paginationQuery);
+    const { search, ...pagination } = paginationQuery;
+    return this.medicoService.findAllByRole(Role.ADMIN, pagination, search);
   }
 
   async deleteUser(idToDelete: string, adminId: string) {
@@ -41,7 +43,7 @@ export class AdminService {
   }
 
   async getPendingPatientRequests(paginationQuery: any) {
-    const { page = 1, limit = 10 } = paginationQuery;
+    const { page = 1, limit = 10, search } = paginationQuery;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.deletionRequestRepository
@@ -52,6 +54,13 @@ export class AdminService {
       .andWhere('request.itemType = :itemType', {
         itemType: ItemType.PACIENTE,
       });
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(paciente.nome ILIKE :search OR paciente.cpf ILIKE :search OR requester.nome ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
 
     const totalItems = await queryBuilder.getCount();
     const requests = await queryBuilder
@@ -95,15 +104,23 @@ export class AdminService {
   }
 
   async getPendingExamRequests(paginationQuery: any) {
-    const { page = 1, limit = 10 } = paginationQuery;
+    const { page = 1, limit = 10, search } = paginationQuery;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.deletionRequestRepository
       .createQueryBuilder('request')
       .innerJoin('request.requester', 'requester')
       .innerJoin('tb_amostras', 'amostra', 'amostra.id = request.itemId')
+      .innerJoin('amostra.paciente', 'paciente')
       .where('request.status = :status', { status: RequestStatus.PENDENTE })
       .andWhere('request.itemType = :itemType', { itemType: ItemType.AMOSTRA });
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(paciente.nome ILIKE :search OR paciente.cpf ILIKE :search OR amostra.nome_amostra ILIKE :search OR requester.nome ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
 
     const totalItems = await queryBuilder.getCount();
     const requests = await queryBuilder

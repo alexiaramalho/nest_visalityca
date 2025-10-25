@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { UserSignUpDTO } from './DTO/medico.dto';
 import { Amostra } from 'src/amostra/amostra.entity';
 import { Role } from 'src/auth/enums/role.enum';
+import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
 
 interface MonthlyExamCount {
   month: string;
@@ -22,7 +23,7 @@ export class MedicoService {
     private readonly medicoRepository: Repository<Medico>,
     @InjectRepository(Amostra)
     private readonly amostraRepository: Repository<Amostra>,
-  ) {}
+  ) { }
 
   async getMonthlyExamCount(
     medicoId: string,
@@ -136,17 +137,36 @@ export class MedicoService {
 
   async findAllByRole(
     role: Role,
-    paginationQuery: any,
+    paginationQuery: PaginationQueryDto,
+    search?: string,
   ): Promise<{ items: Medico[]; meta: any }> {
     const { page = 1, limit = 10 } = paginationQuery;
     const skip = (page - 1) * limit;
 
-    const [medicos, totalItems] = await this.medicoRepository.findAndCount({
-      where: { role },
-      order: { nome: 'ASC' },
-      skip,
-      take: limit,
-    });
+    const queryBuilder = this.medicoRepository.createQueryBuilder('medico');
+
+    queryBuilder.where('medico.role = :role', { role });
+
+    if (search) {
+      const commonFields =
+        '(medico.nome ILIKE :search OR medico.username ILIKE :search OR medico.cpf ILIKE :search)';
+
+      if (role === Role.MEDICO) {
+        queryBuilder.andWhere(`${commonFields} OR medico.crm ILIKE :search`, {
+          search: `%${search}%`,
+        });
+      } else if (role === Role.ADMIN) {
+        queryBuilder.andWhere(commonFields, {
+          search: `%${search}%`,
+        });
+      }
+    }
+
+    const [medicos, totalItems] = await queryBuilder
+      .orderBy('medico.nome', 'ASC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     const meta = {
       totalItems,
