@@ -180,7 +180,7 @@ export class MedicoService {
   }
 
   async deleteById(id: string): Promise<void> {
-    const result = await this.medicoRepository.delete(id);
+    const result = await this.medicoRepository.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
     }

@@ -22,7 +22,7 @@ export class PacienteService {
 
     @InjectRepository(Amostra)
     private amostraRepository: Repository<Amostra>,
-  ) {}
+  ) { }
 
   async findById(id: string): Promise<Paciente | null> {
     const paciente = await this.pacienteRepository.findOneBy({ id });
@@ -192,10 +192,10 @@ export class PacienteService {
           altura: amostra.altura,
           statusExclusao: deletionRequestsMap.get(amostra.id) || null,
           medico: {
-            id: amostra.medico.id,
-            nome: amostra.medico.nome,
+            id: amostra.medico?.id || null,
+            nome: amostra.medico?.nome || 'Médico excluído',
           },
-          canEdit: amostra.medico.id === medicoLogado.id,
+          canEdit: amostra.medico?.id === medicoLogado.id,
         })),
       },
     };
@@ -244,10 +244,10 @@ export class PacienteService {
           largura: amostra.largura,
           altura: amostra.altura,
           medico: {
-            id: amostra.medico.id,
-            nome: amostra.medico.nome,
+            id: amostra.medico?.id || null,
+            nome: amostra.medico?.nome || 'Médico excluído',
           },
-          canEdit: amostra.medico.id === medicoLogado.id,
+          canEdit: amostra.medico?.id === medicoLogado.id,
         })),
       },
     }));

@@ -2,6 +2,7 @@ import { Amostra } from '../amostra/amostra.entity';
 import {
   BeforeInsert,
   Column,
+  DeleteDateColumn,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -38,6 +39,9 @@ export class Medico {
     default: Role.MEDICO, // Todo novo usuário será 'medico' por padrão
   })
   role: Role;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 
   @OneToMany(() => Amostra, (amostra) => amostra.medico)
   amostras: Amostra[];
