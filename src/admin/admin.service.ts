@@ -227,7 +227,8 @@ export class AdminService {
     }
 
     request.reviewer = reviewer;
-    const savedRequest = await this.deletionRequestRepository.save(request);
+    
+    await this.deletionRequestRepository.delete(request.id);
 
     // Enviar notificação para o solicitante
     if (request.requester?.id) {
@@ -240,6 +241,6 @@ export class AdminService {
       });
     }
 
-    return savedRequest;
+    return request;
   }
 }
