@@ -25,6 +25,7 @@ import type { RequestWithMedico } from 'src/auth/types/request-with-medico.inter
 import { MedicoService } from 'src/medico/medico.service';
 import { UserSignUpDTO } from 'src/medico/DTO/medico.dto';
 import { PaginationQueryDto } from 'src/shared/DTO/pagination-query.dto';
+import { ChangePasswordDTO } from './DTO/change-password.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -144,5 +145,17 @@ export class AdminController {
   rejectRequest(@Param('id') id: string, @Request() req: RequestWithMedico) {
     const admin = req.user;
     return this.adminService.reviewRequest(id, false, admin);
+  }
+
+  @Patch('users/:username')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Altera a senha de um usuário pelo username' })
+  @ApiBearerAuth()
+  async changeUserPassword(
+    @Param('username') username: string,
+    @Body() changePasswordDto: ChangePasswordDTO,
+  ) {
+    await this.adminService.changeUserPassword(username, changePasswordDto.newPassword);
+    return { message: 'Senha alterada com sucesso.' };
   }
 }

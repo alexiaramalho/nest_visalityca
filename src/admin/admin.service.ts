@@ -44,6 +44,10 @@ export class AdminService {
     await this.medicoService.deleteById(idToDelete);
   }
 
+  async changeUserPassword(username: string, newPassword: string) {
+    return this.medicoService.changePasswordByUsername(username, newPassword);
+  }
+
   async getPendingPatientRequests(paginationQuery: any) {
     const { page = 1, limit = 10, search } = paginationQuery;
     const skip = (page - 1) * limit;

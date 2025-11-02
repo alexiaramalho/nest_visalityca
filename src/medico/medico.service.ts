@@ -185,4 +185,14 @@ export class MedicoService {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
     }
   }
+
+  async changePasswordByUsername(username: string, newPassword: string): Promise<void> {
+    const medico = await this.medicoRepository.findOneBy({ username });
+    if (!medico) {
+      throw new NotFoundException(`Usuário com username ${username} não encontrado.`);
+    }
+    
+    medico.senha = newPassword;
+    await this.medicoRepository.save(medico);
+  }
 }

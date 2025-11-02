@@ -1,6 +1,7 @@
 import { Amostra } from '../amostra/amostra.entity';
 import {
   BeforeInsert,
+  BeforeUpdate,
   Column,
   DeleteDateColumn,
   Entity,
@@ -47,6 +48,7 @@ export class Medico {
   amostras: Amostra[];
 
   @BeforeInsert()
+  @BeforeUpdate()
   async hashPassword() {
     this.senha = await bcrypt.hash(this.senha, 10);
   }
