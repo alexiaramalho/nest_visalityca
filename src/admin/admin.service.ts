@@ -14,6 +14,7 @@ import { AmostraService } from 'src/amostra/amostra.service';
 import { ItemType } from './enums/item-type.enum';
 import { MedicoService } from 'src/medico/medico.service';
 import { Role } from 'src/auth/enums/role.enum';
+import { NotificationService } from 'src/notifications/notification.service';
 
 @Injectable()
 export class AdminService {
@@ -23,6 +24,7 @@ export class AdminService {
     private pacienteService: PacienteService,
     private amostraService: AmostraService,
     private medicoService: MedicoService,
+    private notificationService: NotificationService,
   ) { }
 
   async listMedicos(paginationQuery: any) {
@@ -184,12 +186,29 @@ export class AdminService {
     approve: boolean,
     reviewer: Medico,
   ): Promise<DeletionRequest> {
-    const request = await this.deletionRequestRepository.findOneBy({ id });
+    const request = await this.deletionRequestRepository.findOne({
+      where: { id },
+      relations: ['requester']
+    });
     if (!request) {
       throw new NotFoundException('Solicitação não encontrada.');
     }
     if (request.status !== RequestStatus.PENDENTE) {
       throw new BadRequestException('Esta solicitação já foi revisada.');
+    }
+
+    // Buscar nome do item antes de deletar
+    let itemName = '';
+    let itemType = '';
+    
+    if (request.itemType === ItemType.PACIENTE) {
+      const paciente = await this.pacienteService.findById(request.itemId);
+      itemName = paciente?.nome || 'Paciente';
+      itemType = 'paciente';
+    } else if (request.itemType === ItemType.AMOSTRA) {
+      const amostra = await this.amostraService.pegarAmostraPorId(request.itemId);
+      itemName = amostra?.nome_amostra || 'Exame';
+      itemType = 'exame';
     }
 
     if (approve) {
@@ -204,6 +223,19 @@ export class AdminService {
     }
 
     request.reviewer = reviewer;
-    return this.deletionRequestRepository.save(request);
+    const savedRequest = await this.deletionRequestRepository.save(request);
+
+    // Enviar notificação para o solicitante
+    if (request.requester?.id) {
+      const action = approve ? 'aprovada' : 'recusada';
+      this.notificationService.sendNotification({
+        userId: request.requester.id,
+        type: 'deletion_request_updated',
+        message: `Sua solicitação de exclusão do ${itemType} "${itemName}" foi ${action} por ${reviewer.nome}`,
+        data: { requestId: request.id, status: request.status, itemName, itemType, reviewerName: reviewer.nome }
+      });
+    }
+
+    return savedRequest;
   }
 }

@@ -7,6 +7,7 @@ import { PacienteModule } from 'src/paciente/paciente.module';
 import { AmostraModule } from 'src/amostra/amostra.module';
 import { MedicoModule } from 'src/medico/medico.module';
 import { SharedModule } from 'src/shared/shared.module';
+import { NotificationModule } from 'src/notifications/notification.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { SharedModule } from 'src/shared/shared.module';
     forwardRef(() => PacienteModule),
     forwardRef(() => AmostraModule),
     forwardRef(() => MedicoModule),
+    NotificationModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

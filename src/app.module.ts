@@ -13,6 +13,8 @@ import { FilesModule } from './files/files.module';
 import { DeletionRequest } from './admin/deletion-request.entity';
 import { AdminModule } from './admin/admin.module';
 import { SeedModule } from './seed/seed.module';
+import { Notification } from './notifications/notification.entity';
+import { NotificationModule } from './notifications/notification.module';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { SeedModule } from './seed/seed.module';
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [Medico, Paciente, Amostra, DeletionRequest],
+      entities: [Medico, Paciente, Amostra, DeletionRequest, Notification],
       synchronize: true,
     }),
     AuthModule,
@@ -35,6 +37,7 @@ import { SeedModule } from './seed/seed.module';
     FilesModule,
     AdminModule,
     SeedModule,
+    NotificationModule,
   ],
   controllers: [],
   providers: [],

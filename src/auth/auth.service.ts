@@ -40,6 +40,7 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       nome: medico.nome,
       role: medico.role,
+      sub: medico.id,
     };
   }
 }
