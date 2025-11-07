@@ -11,7 +11,7 @@ import { RegistroAmostraDTO } from './DTO/amostra.dto';
 import { validate } from 'uuid';
 import { Paciente } from '../paciente/paciente.entity';
 import { Medico } from '../medico/medico.entity';
-import { S3Service } from 'src/files/s3.service';
+import { LocalFilesService } from 'src/files/local-files.service';
 import { UpdateAmostraDTO } from './DTO/update-amostra.dto';
 import { DeletionRequest } from 'src/admin/deletion-request.entity';
 import { ItemType } from 'src/admin/enums/item-type.enum';
@@ -42,7 +42,7 @@ export class AmostraService {
     @InjectRepository(DeletionRequest)
     private deletionRequestRepository: Repository<DeletionRequest>,
 
-    private readonly s3Service: S3Service,
+    private readonly localFilesService: LocalFilesService,
   ) {}
 
   async registrarAmostra(
@@ -111,7 +111,7 @@ export class AmostraService {
         const base64Data = matches[2];
         const buffer = Buffer.from(base64Data, 'base64');
 
-        return this.s3Service.uploadFile(buffer, mimeType);
+        return this.localFilesService.uploadFile(buffer, mimeType);
       });
 
       const urls = await Promise.all(uploadPromises);
@@ -262,7 +262,7 @@ export class AmostraService {
 
     if (amostra.imageUrls && amostra.imageUrls.length > 0) {
       const deletePromises = amostra.imageUrls.map((url) =>
-        this.s3Service.deleteFile(url),
+        this.localFilesService.deleteFile(url),
       );
       await Promise.all(deletePromises);
     }

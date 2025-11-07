@@ -18,7 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "npm run build && ts-node -r tsconfig-paths/register src/seed.ts"
+    "seed": "npm run build && ts-node -r tsconfig-paths/register src/seed.ts",
+    "setup:local": "node scripts/setup-local.js",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down",
+    "db:logs": "docker compose logs postgres",
+    "pgadmin": "start http://localhost:8080"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.896.0",

@@ -24,9 +24,7 @@ import { NotificationModule } from './notifications/notification.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      ssl: false,
       entities: [Medico, Paciente, Amostra, DeletionRequest, Notification],
       synchronize: true,
     }),
